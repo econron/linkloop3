@@ -1,57 +1,36 @@
-import Fastify from 'fastify';
-import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import fastify from 'fastify';
 import cors from '@fastify/cors';
-import env from '@fastify/env';
+import multipart from '@fastify/multipart';
+import pronunciationRoutes from './routes/pronunciation';
 
-const server = Fastify({
+const server = fastify({
   logger: true,
-}).withTypeProvider<TypeBoxTypeProvider>();
+});
 
-// 環境変数の設定
-const envSchema = {
-  type: 'object',
-  required: ['PORT', 'DATABASE_URL'],
-  properties: {
-    PORT: {
-      type: 'string',
-      default: 3001,
-    },
-    DATABASE_URL: {
-      type: 'string',
-    },
+// CORSの設定
+server.register(cors, {
+  origin: true, // 開発環境では全てのオリジンを許可
+  credentials: true,
+});
+
+// マルチパートの設定
+server.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
   },
-};
-
-// プラグインの登録
-async function registerPlugins() {
-  await server.register(env, {
-    schema: envSchema,
-    dotenv: true,
-  });
-
-  await server.register(cors, {
-    origin: true, // 開発環境では全てのオリジンを許可
-    credentials: true,
-  });
-}
+});
 
 // ルートの登録
-async function registerRoutes() {
-  // TODO: ルートの実装
-}
+server.register(pronunciationRoutes, { prefix: '/api' });
 
 // サーバーの起動
-async function start() {
+const start = async () => {
   try {
-    await registerPlugins();
-    await registerRoutes();
-
-    await server.listen({ port: Number(process.env.PORT) || 3001, host: '0.0.0.0' });
-    console.log(`Server is running on port ${process.env.PORT || 3001}`);
+    await server.listen({ port: 3001, host: '0.0.0.0' });
   } catch (err) {
     server.log.error(err);
     process.exit(1);
   }
-}
+};
 
 start(); 
