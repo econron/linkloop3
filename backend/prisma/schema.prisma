@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id              String           @id @default(uuid())
+  createdAt       DateTime         @default(now())
+  lastLoginAt     DateTime         @updatedAt
+  unitProgress    UnitProgress[]
+  phonemeProgress PhonemeProgress[]
+  practiceResults PracticeResult[]
+}
+
+model UnitProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  unitId        String
+  status        String   // 'locked' | 'unlocked' | 'completed'
+  lastAttempted DateTime
+  completedAt   DateTime?
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model PhonemeProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  phoneme       String
+  attempts      Int      @default(0)
+  averageScore  Float
+  bestScore     Float
+  lastScore     Float
+  lastAttempted DateTime
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model PracticeResult {
+  id            String   @id @default(uuid())
+  userId        String
+  unitId        String
+  phoneme       String
+  phrase        String
+  overallScore  Float
+  phonemeScores String   // JSON string of phoneme scores
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id])
+}
