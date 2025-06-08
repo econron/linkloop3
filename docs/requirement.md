@@ -219,52 +219,54 @@
 
 - NBestPhonemeのスコアを全て取得し平均値を計算する。IPAの発音記号と音素の対応表は下記の通り。
 
-| 音素 (一般的な記号)        | IPA記号        | 発音例 (単語)      | 日本語での近い音のカタカナ表記例   |
-| :--------------------------- | :------------- | :----------------- | :--------------------------------- |
-| **単母音 (Monophthongs)** |                |                    |                                    |
-| i (long e)                   | $/i/$ or $/iː/$ | s**ee**, m**ea**t    | イー                               |
-| ɪ (short i)                  | $/ɪ/$          | s**i**t, k**i**ck    | イ                                 |
-| eɪ (long a)                  | $/eɪ/$         | s**ay**, m**a**ke    | エイ                               |
-| ɛ (short e)                  | $/ɛ/$          | b**e**d, m**e**t     | エ                                 |
-| æ (short a)                  | $/æ/$          | c**a**t, h**a**t     | ア（口を横に広げて）               |
-| ɑ (ah)                       | $/ɑ/$          | f**a**ther, c**o**t  | アー（口を縦に開けて）             |
-| ɔ (aw)                       | $/ɔ/$          | c**augh**t, l**aw** | オー（口を丸めて）                 |
-| oʊ (long o)                  | $/oʊ/$         | g**o**, n**o**te     | オウ                               |
-| ʊ (short u)                  | $/ʊ/$          | p**u**t, b**oo**k    | ウ（唇を少し丸めて）               |
-| u (long u)                   | $/u/$ or $/uː/$ | bl**ue**, f**oo**d   | ウー                               |
-| ʌ (uh, stressed)             | $/ʌ/$          | c**u**p, l**u**ck    | ア（短く、やや曖昧な）             |
-| ə (schwa, unstressed)        | $/ə/$          | **a**bout, sof**a** | ア（曖昧母音、非常に弱い）         |
-| ɚ (schwar, unstressed)       | $/ɚ/$          | lett**er**, doct**or** | アー（R音性、非常に弱い）          |
-| ɝ (stressed schwar)          | $/ɝ/$          | b**ir**d, f**ur** | アー（R音性、強調される）          |
-| **二重母音 (Diphthongs)** |                |                    |                                    |
-| aɪ (long i)                  | $/aɪ/$         | m**y**, b**uy** | アイ                               |
-| aʊ (ow)                      | $/aʊ/$         | n**ow**, h**ou**se   | アウ                               |
-| ɔɪ (oy)                      | $/ɔɪ/$         | b**oy**, t**oy** | オイ                               |
-| **子音 (Consonants)** |                |                    |                                    |
-| p                            | $/p/$          | **p**ie, ha**pp**y   | プ                                 |
-| b                            | $/b/$          | **b**uy, ro**b** | ブ                                 |
-| t                            | $/t/$          | **t**ie, ho**t** | トゥ                               |
-| d                            | $/d/$          | **d**ie, ma**d**e    | ドゥ                               |
-| k                            | $/k/$          | **k**ite, **c**at    | ク                                 |
-| g                            | $/g/$          | **g**uy, bi**g** | グ                                 |
-| f                            | $/f/$          | **f**ie, lea**f** | フ（下唇を軽く噛む）               |
-| v                            | $/v/$          | **v**ie, ha**ve** | ヴ（下唇を軽く噛む、有声音）       |
-| θ (th, voiceless)            | $/θ/$          | **th**igh, ba**th** | ス（舌先を歯の間にはさむ）         |
-| ð (th, voiced)               | $/ð/$          | **th**y, ba**the** | ズ（舌先を歯の間にはさむ、有声音） |
-| s                            | $/s/$          | **s**igh, ki**ss** | ス                                 |
-| z                            | $/z/$          | **z**oo, bu**zz** | ズ                                 |
-| ʃ (sh)                       | $/ʃ/$          | **sh**y, fi**sh** | シュ                               |
-| ʒ (zh)                       | $/ʒ/$          | mea**s**ure, vi**si**on | ジュ（舌の位置はシュと同じで有声音）|
-| h                            | $/h/$          | **h**igh, a**h**ead  | フ/ハ（息の音）                    |
-| tʃ (ch)                      | $/tʃ/$         | **ch**eap, ca**tch** | チ                                 |
-| dʒ (j, dg)                   | $/dʒ/$         | **j**oy, e**dge** | ヂ/ジ                              |
-| m                            | $/m/$          | **m**y, swi**m** | ム                                 |
-| n                            | $/n/$          | **n**igh, su**n** | ン（舌先を上の歯茎につける）       |
-| ŋ (ng)                       | $/ŋ/$          | si**ng**, thi**n**k  | ン（舌の奥を軟口蓋につける）       |
-| l                            | $/l/$          | **l**ie, fee**l** | ル（舌先を上の歯茎につける）       |
-| r                            | $/r/$          | **r**ye, ve**r**y    | ル（舌を巻く）                     |
-| w                            | $/w/$          | **w**hy, a**w**ay    | ウ/ワ                              |
-| j (y)                        | $/j/$          | **y**es, be**y**ond  | イ/ヤ                              |
+母音 (Vowels)
+| ARPABET | IPA | 単語例 (Example) | 説明 |
+| :--- | :-: | :--- | :--- |
+| AA | ɑ | bot, cot | 「ア」と「オ」の中間のような音 |
+| AE | æ | cat, bat | 明るい「ア」 |
+| AH | ʌ | but, cut | 口をあまり開けない「ア」（強勢あり） |
+| AO | ɔ | caught, bought | 口を丸めて発音する「オ」 |
+| AX | ə | about, sofa | 曖昧母音シュワ（強勢なし） |
+| AY | aɪ | bite, high | 二重母音「アイ」 |
+| EH | ɛ | bed, met | 「エ」 |
+| ER | ɝ | bird, hurt | R音性母音（強勢あり） |
+| AXR | ɚ | butter, doctor | R音性母音（強勢なし） |
+| EY | eɪ | bait, day | 二重母音「エイ」 |
+| IH | ɪ | bit, sit | 「イ」と「エ」の中間のような音 |
+| IY | i | beat, see | 長い「イー」 |
+| OW | oʊ | boat, go | 二重母音「オウ」 |
+| OY | ɔɪ | boy, toy | 二重母音「オイ」 |
+| UH | ʊ | book, put | 短い「ウ」 |
+| UW | u | boot, moon | 長い「ウー」 |
+| AW | aʊ | down, now | 二重母音「アウ」 |
+
+子音 (Consonants)
+| ARPABET | IPA | 単語例 (Example) |
+| :--- | :-: | :--- |
+| P | p | pan |
+| B | b | ban |
+| T | t | tap |
+| D | d | dab |
+| K | k | cat, kick |
+| G | g | go |
+| CH | tʃ | church |
+| JH | dʒ | judge |
+| F | f | fan |
+| V | v | van |
+| TH | θ | thin, thigh |
+| DH | ð | this, then |
+| S | s | sip |
+| Z | z | zip |
+| SH | ʃ | she, push |
+| ZH | ʒ | measure, vision |
+| HH | h | he |
+| M | m | man |
+| N | n | no |
+| NG | ŋ | sing, ring |
+| L | l | left |
+| R | r | red |
+| W | w | we |
+| Y | j | yes |
 
 - 以上に基づき、どの発音記号がどの程度成功したかを計算するようアルゴリズムを組むこと。
 

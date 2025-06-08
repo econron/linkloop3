@@ -1,16 +1,16 @@
 'use client';
 
 interface PhonemeCardProps {
-  phoneme: string;
   ipa: string;
+  arpabet: string;
   example: string;
   status: 'not_started' | 'in_progress' | 'completed';
   averageScore?: number;
 }
 
 export const PhonemeCard = ({
-  phoneme,
   ipa,
+  arpabet,
   example,
   status,
   averageScore,
@@ -42,8 +42,8 @@ export const PhonemeCard = ({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-semibold text-gray-900">{phoneme}</h3>
-            <span className="text-lg text-gray-500">[{ipa}]</span>
+            <h3 className="text-3xl font-bold text-gray-900">{ipa}</h3>
+            <span className="text-base text-gray-500">({arpabet})</span>
           </div>
           <p className="mt-1 text-sm text-gray-500">例: {example}</p>
         </div>

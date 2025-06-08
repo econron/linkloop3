@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: Linkloop Pronunciation API
+  version: 1.0.0
+  description: |
+    発音評価・進捗管理のためのAPI（Fastify実装）。
+    
+    - prefix: /api
+    - 認証: x-user-idヘッダー（必要なAPIのみ）
+
+servers:
+  - url: http://localhost:3001/api
+
+paths:
+  /pronunciation-assessment-advanced:
+    post:
+      summary: 発音評価（アドバンスト）
+      description: 音声ファイルとテキストを送信し、Azureで発音評価を実施。結果を返す。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: 音声ファイル（wav/mp3等）
+                referenceText:
+                  type: string
+                  description: 評価対象のテキスト
+      parameters:
+        - in: header
+          name: x-user-id
+          schema:
+            type: string
+          required: false
+          description: ユーザーID（集計時に必要）
+      responses:
+        '200':
+          description: 発音評価結果（Azure形式）
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Azure Speech ServiceのPronunciationAssessmentレスポンス
+        '400':
+          description: audio/referenceText未指定
+        '500':
+          description: サーバーエラー
+
+  /pronunciation-assessment/summary:
+    get:
+      summary: 発音の癖集計取得
+      description: ユーザーごとの音素誤り集計を返す
+      parameters:
+        - in: header
+          name: x-user-id
+          schema:
+            type: string
+          required: true
+          description: ユーザーID
+      responses:
+        '200':
+          description: 音素誤り集計
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    phoneme:
+                      type: string
+                    errorCount:
+                      type: integer
+                    correctCount:
+                      type: integer
+        '401':
+          description: ユーザーID未指定
+        '500':
+          description: サーバーエラー
+
+  /pronunciation-assessment/save-raw:
+    post:
+      summary: 発音評価の生データ保存（DynamoDB）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, unitId, phrase, rawResult]
+              properties:
+                userId:
+                  type: string
+                unitId:
+                  type: string
+                phrase:
+                  type: string
+                rawResult:
+                  type: object
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: 必須項目未指定
+        '500':
+          description: サーバーエラー
+
+  /pronunciation-assessment/save-summary:
+    post:
+      summary: 発音の癖集計保存（RDB）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, azureResponse]
+              properties:
+                userId:
+                  type: string
+                azureResponse:
+                  type: object
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: 必須項目未指定
+        '500':
+          description: サーバーエラー
+
+  /unit-progress:
+    post:
+      summary: ユニット進捗保存（UPSERT）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, unitId, status]
+              properties:
+                userId:
+                  type: string
+                unitId:
+                  type: string
+                status:
+                  type: string
+                lastAttempted:
+                  type: string
+                  format: date-time
+                  nullable: true
+                completedAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: 保存成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          description: 必須項目未指定
+        '500':
+          description: サーバーエラー
+    get:
+      summary: ユニット進捗取得
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+          required: true
+          description: ユーザーID
+      responses:
+        '200':
+          description: 進捗一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: ユーザーID未指定
+        '500':
+          description: サーバーエラー 
