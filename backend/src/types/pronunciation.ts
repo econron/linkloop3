@@ -16,6 +16,12 @@ export interface AzurePronunciationResponse {
         };
       }>;
     }>;
+    PronunciationAssessment: {
+      PronScore: number;
+      AccuracyScore: number;
+      FluencyScore: number;
+      ProsodyScore: number;
+    };
   }>;
 }
 

@@ -21,6 +21,7 @@ model User {
   phonemeProgress PhonemeProgress[]
   phonemeErrorSummaries PhonemeErrorSummary[]
   pronunciationHabits PronunciationHabit[]
+  analyses PronunciationAnalysis[]
 }
 
 model UnitProgress {
@@ -75,4 +76,41 @@ model PronunciationHabit {
 
   @@unique([userId, phoneme, confusedWith])
   @@index([userId, lastOccurredAt])
+}
+
+model Unit {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  metadata    String   @default("{}") 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  analyses    PronunciationAnalysis[]
+}
+
+model PronunciationAnalysis {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  unitId      Int
+  overallScore Float
+  accuracyScore Float
+  fluencyScore Float
+  prosodyScore Float
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id])
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  findings    PronunciationFinding[]
+}
+
+model PronunciationFinding {
+  id          Int      @id @default(autoincrement())
+  analysisId  Int
+  type        String   // 'ERROR' | 'HABIT' | 'PROSODY'
+  phoneme     String
+  details     String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  analysis    PronunciationAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 }

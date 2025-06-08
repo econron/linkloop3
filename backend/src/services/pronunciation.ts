@@ -3,13 +3,12 @@ import { AzurePronunciationResponse, PhonemeErrorPair, PronunciationHabit } from
 
 const prisma = new PrismaClient();
 
-export async function updatePronunciationSummary(
-  userId: string,
-  azureResponse: AzurePronunciationResponse
-): Promise<void> {
-  // 追加: Azureレスポンスの内容をログ出力
-  console.log('updatePronunciationSummary: azureResponse =', JSON.stringify(azureResponse, null, 2));
-  
+interface AnalysisData {
+  errorPairs: PhonemeErrorPair[];
+  habits: PronunciationHabit[];
+}
+
+function extractFindings(azureResponse: AzurePronunciationResponse): AnalysisData {
   const errorPairs: PhonemeErrorPair[] = [];
   const habits: PronunciationHabit[] = [];
   
@@ -43,67 +42,60 @@ export async function updatePronunciationSummary(
     }
   }
 
-  // 追加: 検出結果のログ出力
-  console.log('updatePronunciationSummary: errorPairs =', errorPairs);
-  console.log('updatePronunciationSummary: habits =', habits);
+  return { errorPairs, habits };
+}
 
-  // エラーペアの保存
-  for (const pair of errorPairs) {
-    try {
-      await prisma.phonemeErrorSummary.upsert({
-        where: {
-          userId_intendedPhoneme_actualPhoneme: {
-            userId,
-            intendedPhoneme: pair.intendedPhoneme,
-            actualPhoneme: pair.actualPhoneme,
-          },
-        },
-        update: {
-          errorCount: { increment: 1 },
-          lastOccurredAt: new Date(),
-        },
-        create: {
-          userId,
-          intendedPhoneme: pair.intendedPhoneme,
-          actualPhoneme: pair.actualPhoneme,
-          errorCount: 1,
-          lastOccurredAt: new Date(),
+export async function analyzeAndSavePronunciation(
+  userId: string,
+  unitId: number,
+  azureResponse: AzurePronunciationResponse
+): Promise<number> {
+  const analysisData = extractFindings(azureResponse);
+
+  const newAnalysis = await prisma.$transaction(async (tx) => {
+    // 分析レコードの作成
+    const analysis = await tx.pronunciationAnalysis.create({
+      data: {
+        userId,
+        unitId,
+        overallScore: azureResponse.NBest[0].PronunciationAssessment.PronScore || 0,
+        accuracyScore: azureResponse.NBest[0].PronunciationAssessment.AccuracyScore || 0,
+        fluencyScore: azureResponse.NBest[0].PronunciationAssessment.FluencyScore || 0,
+        prosodyScore: azureResponse.NBest[0].PronunciationAssessment.ProsodyScore || 0,
+      },
+    });
+
+    // エラーペアの保存
+    for (const pair of analysisData.errorPairs) {
+      await tx.pronunciationFinding.create({
+        data: {
+          analysisId: analysis.id,
+          type: 'ERROR',
+          phoneme: pair.intendedPhoneme,
+          details: JSON.stringify({ actual: pair.actualPhoneme }),
         },
       });
-    } catch (e) {
-      console.error('Prisma upsert error:', e);
-      throw e;
     }
-  }
 
-  // 癖の保存
-  for (const habit of habits) {
-    try {
-      await prisma.pronunciationHabit.upsert({
-        where: {
-          userId_phoneme_confusedWith: {
-            userId,
-            phoneme: habit.phoneme,
-            confusedWith: habit.confusedWith,
-          },
-        },
-        update: {
-          accuracyScore: habit.accuracyScore,
-          lastOccurredAt: new Date(),
-        },
-        create: {
-          userId,
+    // 癖の保存
+    for (const habit of analysisData.habits) {
+      await tx.pronunciationFinding.create({
+        data: {
+          analysisId: analysis.id,
+          type: 'HABIT',
           phoneme: habit.phoneme,
-          confusedWith: habit.confusedWith,
-          accuracyScore: habit.accuracyScore,
-          lastOccurredAt: new Date(),
+          details: JSON.stringify({
+            confusedWith: habit.confusedWith,
+            accuracyScore: habit.accuracyScore,
+          }),
         },
       });
-    } catch (e) {
-      console.error('Prisma upsert error for habit:', e);
-      throw e;
     }
-  }
+
+    return analysis;
+  });
+
+  return newAnalysis.id;
 }
 
 export async function getPronunciationSummary(userId: string) {

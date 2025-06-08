@@ -10,7 +10,8 @@ import { Readable } from 'stream';
 import { PrismaClient } from '@prisma/client';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
-import { updatePronunciationSummary, getPronunciationSummary } from '../services/pronunciation';
+import { analyzeAndSavePronunciation, getPronunciationSummary } from '../services/pronunciation';
+import { generatePersonalizedFeedback } from '../services/feedbackService';
 
 ffmpeg.setFfmpegPath(ffmpegPath as string);
 
@@ -216,7 +217,7 @@ const pronunciationRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
       // 発音の癖を集計
       const userId = request.headers['x-user-id'] as string;
       if (userId) {
-        await updatePronunciationSummary(userId, result as any);
+        await analyzeAndSavePronunciation(userId, 1, result as any);
       }
 
       // 一時ファイルの削除
@@ -288,11 +289,50 @@ const pronunciationRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
     }
 
     try {
-      await updatePronunciationSummary(userId, azureResponse);
+      await analyzeAndSavePronunciation(userId, 1, azureResponse);
       return reply.send({ success: true });
     } catch (error) {
       return reply.status(500).send({ error: 'Failed to save pronunciation summary', details: String(error) });
     }
+  });
+
+  // 発音評価のフィードバックを取得するエンドポイント
+  fastify.get<{
+    Params: { analysisId: string };
+    Querystring: { focusOn?: string; includeGeneralAdvice?: string };
+  }>('/pronunciation-assessment/:analysisId/feedback', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['analysisId'],
+        properties: {
+          analysisId: { type: 'string' },
+        },
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          focusOn: { type: 'string' },
+          includeGeneralAdvice: { type: 'string' },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { analysisId } = request.params;
+      const { focusOn, includeGeneralAdvice } = request.query;
+
+      try {
+        const feedback = await generatePersonalizedFeedback(parseInt(analysisId), {
+          focusOn: focusOn ? focusOn.split(',') : undefined,
+          includeGeneralAdvice: includeGeneralAdvice === 'true',
+        });
+
+        return reply.send({ feedback });
+      } catch (error) {
+        console.error('Error generating feedback:', error);
+        return reply.status(500).send({ error: 'Failed to generate feedback' });
+      }
+    },
   });
 };
 

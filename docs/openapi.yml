@@ -39,21 +39,72 @@ paths:
           description: ユーザーID（集計時に必要）
       responses:
         '200':
-          description: 発音評価結果（Azure形式）
+          description: 発音評価結果
           content:
             application/json:
               schema:
                 type: object
-                description: Azure Speech ServiceのPronunciationAssessmentレスポンス
+                properties:
+                  analysisId:
+                    type: integer
+                    description: 新しく作成された分析ID
+                  azureResponse:
+                    type: object
+                    description: Azure Speech ServiceのPronunciationAssessmentレスポンス
         '400':
           description: audio/referenceText未指定
         '500':
           description: サーバーエラー
 
+  /pronunciation-assessment/{analysisId}/feedback:
+    get:
+      summary: 発音評価のフィードバック取得
+      description: 特定の分析IDに対するパーソナライズされたフィードバックを返す
+      parameters:
+        - in: path
+          name: analysisId
+          required: true
+          schema:
+            type: integer
+          description: 分析ID
+        - in: query
+          name: focusOn
+          schema:
+            type: array
+            items:
+              type: string
+          description: 重点的にフィードバックを取得したい音素の配列
+        - in: query
+          name: includeGeneralAdvice
+          schema:
+            type: boolean
+          description: 一般的なアドバイスを含めるかどうか
+      responses:
+        '200':
+          description: パーソナライズされたフィードバック
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        content:
+                          type: string
+        '404':
+          description: 分析が見つからない
+        '500':
+          description: サーバーエラー
+
   /pronunciation-assessment/summary:
     get:
-      summary: 発音の癖集計取得
-      description: ユーザーごとの音素誤り集計を返す
+      summary: 発音分析のサマリー取得
+      description: ユーザーの発音分析のサマリーを取得
       parameters:
         - in: header
           name: x-user-id
@@ -63,20 +114,32 @@ paths:
           description: ユーザーID
       responses:
         '200':
-          description: 音素誤り集計
+          description: 発音分析のサマリー
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    phoneme:
-                      type: string
-                    errorCount:
-                      type: integer
-                    correctCount:
-                      type: integer
+                type: object
+                properties:
+                  overallScore:
+                    type: number
+                  accuracyScore:
+                    type: number
+                  fluencyScore:
+                    type: number
+                  prosodyScore:
+                    type: number
+                  findings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [ERROR, HABIT]
+                        phoneme:
+                          type: string
+                        details:
+                          type: object
         '401':
           description: ユーザーID未指定
         '500':
