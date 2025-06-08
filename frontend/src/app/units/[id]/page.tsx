@@ -8,6 +8,14 @@ export default function UnitPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  console.log('UnitPage params:', { 
+    params, 
+    id, 
+    type: typeof id,
+    rawParams: JSON.stringify(params),
+    rawId: params.id,
+    rawIdType: typeof params.id
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoComplete, setIsVideoComplete] = useState(false);
   const [isInteractive, setIsInteractive] = useState(false);
@@ -18,7 +26,23 @@ export default function UnitPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [assessmentResult, setAssessmentResult] = useState<any>(null);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [assessmentResult, setAssessmentResult] = useState<{
+    NBest?: Array<{
+      PronunciationAssessment?: {
+        AccuracyScore: number;
+        FluencyScore: number;
+      };
+    }>;
+    feedback?: {
+      sections: Array<{
+        title: string;
+        content: string;
+      }>;
+    };
+    error?: string;
+    details?: string;
+  } | null>(null);
   const [isSending, setIsSending] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -109,14 +133,68 @@ export default function UnitPage() {
 
       // 3. RDBに集計データ保存
       try {
-        await fetch("http://localhost:4000/api/pronunciation-assessment/save-summary", {
+        const unitId = Number(id);
+        console.log('Current unit ID:', { 
+          id, 
+          unitId, 
+          type: typeof unitId,
+          isNaN: isNaN(unitId),
+          params: params,
+          rawId: params.id,
+          rawIdType: typeof params.id,
+          stringifiedParams: JSON.stringify(params)
+        });
+        
+        if (isNaN(unitId)) {
+          throw new Error(`Invalid unit ID: ${id}`);
+        }
+        
+        const payload = {
+          userId: "test-user", // TODO: 実装時は動的に
+          unitId,
+          azureResponse: data,
+        };
+        console.log('Saving summary with payload:', payload);
+        
+        const summaryRes = await fetch("http://localhost:4000/api/pronunciation-assessment/save-summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: "test-user", // TODO: 実装時は動的に
-            azureResponse: data,
-          }),
+          body: JSON.stringify(payload),
         });
+        
+        if (!summaryRes.ok) {
+          const errorData = await summaryRes.json();
+          console.error('Summary save error:', errorData);
+          throw new Error(`Failed to save summary: ${errorData.error}`);
+        }
+        
+        const summaryData = await summaryRes.json();
+        console.log('Summary save response:', summaryData);
+        
+        // 4. フィードバックを取得
+        if (summaryData.analysisId) {
+          setIsGeneratingFeedback(true);
+          try {
+            const feedbackRes = await fetch(`http://localhost:4000/api/pronunciation-assessment/${summaryData.analysisId}/feedback`);
+            if (!feedbackRes.ok) {
+              throw new Error(`Failed to fetch feedback: ${feedbackRes.statusText}`);
+            }
+            const feedbackData = await feedbackRes.json();
+            setAssessmentResult(prev => ({
+              ...prev,
+              feedback: feedbackData.feedback
+            }));
+          } catch (error) {
+            console.error('Error fetching feedback:', error);
+            setAssessmentResult(prev => ({
+              ...prev,
+              error: 'Failed to generate feedback',
+              details: String(error)
+            }));
+          } finally {
+            setIsGeneratingFeedback(false);
+          }
+        }
       } catch (e) {
         console.error("RDB保存APIエラー", e);
       }
@@ -227,6 +305,32 @@ export default function UnitPage() {
                         <p className="text-sm text-black">流暢さ</p>
                         <p className="text-xl font-bold">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore}%</p>
                       </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">フィードバック:</h4>
+                    <div className="space-y-2">
+                      {isGeneratingFeedback ? (
+                        <div className="bg-white p-3 rounded">
+                          <p className="text-sm text-gray-700">フィードバックを生成中...</p>
+                        </div>
+                      ) : assessmentResult?.error ? (
+                        <div className="bg-white p-3 rounded">
+                          <p className="text-sm text-red-600">フィードバックの生成に失敗しました</p>
+                          <p className="text-xs text-gray-500">{assessmentResult.details}</p>
+                        </div>
+                      ) : assessmentResult?.feedback?.sections?.length ? (
+                        assessmentResult.feedback.sections.map((section: any, index: number) => (
+                          <div key={index} className="bg-white p-3 rounded">
+                            <h5 className="font-medium text-blue-900">{section.title}</h5>
+                            <p className="text-sm text-gray-700">{section.content}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="bg-white p-3 rounded">
+                          <p className="text-sm text-gray-700">フィードバックはまだ生成されていません</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

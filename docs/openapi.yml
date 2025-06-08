@@ -12,6 +12,41 @@ servers:
   - url: http://localhost:3001/api
 
 paths:
+  /pronunciation-assessment:
+    post:
+      summary: 発音評価（基本）
+      description: 音声データとテキストを送信し、Azureで発音評価を実施。結果を返す。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audio, referenceText]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: 音声データ（Base64エンコード）
+                referenceText:
+                  type: string
+                  description: 評価対象のテキスト
+      responses:
+        '200':
+          description: 発音評価結果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  azureResponse:
+                    type: object
+                    description: Azure Speech ServiceのPronunciationAssessmentレスポンス
+        '400':
+          description: audio/referenceText未指定
+        '500':
+          description: サーバーエラー
+
   /pronunciation-assessment-advanced:
     post:
       summary: 発音評価（アドバンスト）

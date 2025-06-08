@@ -279,19 +279,25 @@ const pronunciationRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
 
   // RDB集計保存API
   fastify.post('/pronunciation-assessment/save-summary', async (request, reply) => {
-    const { userId, azureResponse } = request.body as {
+    const { userId, unitId, azureResponse } = request.body as {
       userId: string;
+      unitId: number;
       azureResponse: any;
     };
 
-    if (!userId || !azureResponse) {
-      return reply.status(400).send({ error: 'userId and azureResponse are required' });
+    console.log('Received save-summary request:', { userId, unitId });
+
+    if (!userId || !unitId || !azureResponse) {
+      console.log('Missing required fields:', { userId, unitId, hasAzureResponse: !!azureResponse });
+      return reply.status(400).send({ error: 'userId, unitId and azureResponse are required' });
     }
 
     try {
-      await analyzeAndSavePronunciation(userId, 1, azureResponse);
-      return reply.send({ success: true });
+      const analysisId = await analyzeAndSavePronunciation(userId, unitId, azureResponse);
+      console.log('save-summary: analysisId =', analysisId);
+      return reply.send({ success: true, analysisId });
     } catch (error) {
+      console.error('Error saving pronunciation summary:', error);
       return reply.status(500).send({ error: 'Failed to save pronunciation summary', details: String(error) });
     }
   });
