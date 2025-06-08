@@ -162,8 +162,8 @@ export default function UnitPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{unitData.title}</h1>
-        <p className="mt-2 text-sm text-gray-500">{unitData.description}</p>
+        <h1 className="text-2xl font-bold text-black">{unitData.title}</h1>
+        <p className="mt-2 text-sm text-black">{unitData.description}</p>
       </div>
 
       <div className="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
@@ -220,11 +220,11 @@ export default function UnitPage() {
                     <h4 className="font-medium mb-2">スコア:</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600">正確性</p>
+                        <p className="text-sm text-black">正確性</p>
                         <p className="text-xl font-bold">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore}%</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">流暢さ</p>
+                        <p className="text-sm text-black">流暢さ</p>
                         <p className="text-xl font-bold">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore}%</p>
                       </div>
                     </div>

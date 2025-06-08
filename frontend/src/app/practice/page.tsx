@@ -132,8 +132,8 @@ export default function PracticePage() {
     <div className="max-w-xl mx-auto p-8 space-y-8">
       <h1 className="text-2xl font-bold">発音練習</h1>
       <div className="bg-blue-50 p-4 rounded-lg">
-        <div className="mb-2 text-lg font-semibold">{`文 ${currentIndex + 1} / ${practicePhrases.length}`}</div>
-        <div className="mb-4 text-xl">{practicePhrases[currentIndex]}</div>
+        <div className="mb-2 text-lg font-semibold text-black">{`文 ${currentIndex + 1} / ${practicePhrases.length}`}</div>
+        <div className="mb-4 text-xl text-black font-semibold">{practicePhrases[currentIndex]}</div>
         <div className="flex gap-4 mb-4">
           <button
             onClick={isRecording ? stopRecording : startRecording}

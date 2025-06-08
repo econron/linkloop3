@@ -56,8 +56,8 @@ export default function PhonemesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">発音記号一覧</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-black">発音記号一覧</h1>
+        <p className="mt-2 text-sm text-black">
           各発音記号の練習状況と平均スコアを確認できます。
         </p>
       </div>

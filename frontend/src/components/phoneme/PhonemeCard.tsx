@@ -22,7 +22,7 @@ export const PhonemeCard = ({
       case 'in_progress':
         return 'bg-blue-100 text-blue-800';
       case 'not_started':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-black';
     }
   };
 
@@ -42,10 +42,10 @@ export const PhonemeCard = ({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-bold text-gray-900">{ipa}</h3>
-            <span className="text-base text-gray-500">({arpabet})</span>
+            <h3 className="text-3xl font-bold text-black">{ipa}</h3>
+            <span className="text-base text-black">({arpabet})</span>
           </div>
-          <p className="mt-1 text-sm text-gray-500">例: {example}</p>
+          <p className="mt-1 text-sm text-black">例: {example}</p>
         </div>
         <span className={`ml-4 rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor()}`}>
           {getStatusText()}
@@ -55,8 +55,8 @@ export const PhonemeCard = ({
       {status !== 'not_started' && averageScore !== undefined && (
         <div className="mt-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">平均スコア</span>
-            <span className="text-sm font-medium text-gray-900">{averageScore}%</span>
+            <span className="text-sm text-black">平均スコア</span>
+            <span className="text-sm font-medium text-black">{averageScore}%</span>
           </div>
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
             <div

@@ -40,8 +40,8 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">コース進捗</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-black">コース進捗</h1>
+        <p className="mt-2 text-sm text-black">
           各ユニットを完了して、発音スキルを向上させましょう。
         </p>
       </div>

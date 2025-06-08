@@ -24,7 +24,7 @@ export const UnitCard = ({
       case 'unlocked':
         return 'bg-blue-100 text-blue-800';
       case 'locked':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-black';
     }
   };
 
@@ -43,8 +43,8 @@ export const UnitCard = ({
     <div className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p className="mt-1 text-sm text-gray-500">{description}</p>
+          <h3 className="text-lg font-semibold text-black">{title}</h3>
+          <p className="mt-1 text-sm text-black">{description}</p>
         </div>
         <span className={`ml-4 rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor()}`}>
           {getStatusText()}
@@ -59,7 +59,7 @@ export const UnitCard = ({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-1 text-right text-sm text-gray-500">{progress}%</p>
+          <p className="mt-1 text-right text-sm text-black">{progress}%</p>
         </div>
       )}
 

@@ -8,13 +8,22 @@ export interface AzurePronunciationResponse {
         Phoneme: string;
         PronunciationAssessment: {
           ErrorType: string;
+          AccuracyScore?: number;
           NBestPhonemes?: Array<{
             Phoneme: string;
+            Score?: number;
           }>;
         };
       }>;
     }>;
   }>;
+}
+
+export interface PronunciationHabit {
+  phoneme: string;
+  confusedWith: string;
+  accuracyScore: number;
+  lastOccurredAt: Date;
 }
 
 export interface PhonemeErrorPair {
