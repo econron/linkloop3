@@ -28,16 +28,3 @@ CREATE TABLE "PhonemeProgress" (
     "lastAttempted" DATETIME NOT NULL,
     CONSTRAINT "PhonemeProgress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
-
--- CreateTable
-CREATE TABLE "PracticeResult" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "userId" TEXT NOT NULL,
-    "unitId" TEXT NOT NULL,
-    "phoneme" TEXT NOT NULL,
-    "phrase" TEXT NOT NULL,
-    "overallScore" REAL NOT NULL,
-    "phonemeScores" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "PracticeResult_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);

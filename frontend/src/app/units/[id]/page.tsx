@@ -1,17 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 
-interface UnitPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function UnitPage({ params }: UnitPageProps) {
+export default function UnitPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoComplete, setIsVideoComplete] = useState(false);
   const [isInteractive, setIsInteractive] = useState(false);
@@ -29,7 +25,7 @@ export default function UnitPage({ params }: UnitPageProps) {
 
   // 仮のデータ（後でAPIから取得するように変更）
   const unitData = {
-    id: params.id,
+    id: id,
     title: 'RとLの発音',
     description: '英語のRとLの発音の違いを学びましょう。',
     videoUrl: '/videos/r_l_pronunciation.mp4',
@@ -86,13 +82,44 @@ export default function UnitPage({ params }: UnitPageProps) {
     formData.append('audio', audioBlob, `recording-${unitData.practiceWords[currentPracticeIndex]}.wav`);
     formData.append('referenceText', unitData.practiceWords[currentPracticeIndex]);
     try {
-      const res = await fetch('http://localhost:3001/api/pronunciation-assessment-advanced', {
+      // 1. 発音評価API呼び出し
+      const res = await fetch('http://localhost:4000/api/pronunciation-assessment-advanced', {
         method: 'POST',
         body: formData,
       });
       const data = await res.json();
       console.log('API response:', data);
       setAssessmentResult(data);
+
+      // 2. DynamoDBに生データ保存
+      try {
+        await fetch("http://localhost:4000/api/pronunciation-assessment/save-raw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: "test-user", // TODO: 実装時は動的に
+            unitId: id,
+            phrase: unitData.practiceWords[currentPracticeIndex],
+            rawResult: data,
+          }),
+        });
+      } catch (e) {
+        console.error("DynamoDB保存APIエラー", e);
+      }
+
+      // 3. RDBに集計データ保存
+      try {
+        await fetch("http://localhost:4000/api/pronunciation-assessment/save-summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: "test-user", // TODO: 実装時は動的に
+            azureResponse: data,
+          }),
+        });
+      } catch (e) {
+        console.error("RDB保存APIエラー", e);
+      }
     } catch (err) {
       setAssessmentResult({ error: 'API request failed', details: String(err) });
     } finally {
@@ -129,7 +156,7 @@ export default function UnitPage({ params }: UnitPageProps) {
   };
 
   const handleNext = () => {
-    router.push(`/practice/${params.id}`);
+    router.push(`/practice/${id}`);
   };
 
   return (

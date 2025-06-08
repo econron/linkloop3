@@ -19,7 +19,7 @@ model User {
   lastLoginAt     DateTime         @updatedAt
   unitProgress    UnitProgress[]
   phonemeProgress PhonemeProgress[]
-  practiceResults PracticeResult[]
+  phonemeErrorSummaries PhonemeErrorSummary[]
 }
 
 model UnitProgress {
@@ -44,14 +44,17 @@ model PhonemeProgress {
   user          User     @relation(fields: [userId], references: [id])
 }
 
-model PracticeResult {
-  id            String   @id @default(uuid())
-  userId        String
-  unitId        String
-  phoneme       String
-  phrase        String
-  overallScore  Float
-  phonemeScores String   // JSON string of phoneme scores
-  createdAt     DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id])
+model PhonemeErrorSummary {
+  id                String   @id @default(uuid())
+  userId            String
+  intendedPhoneme   String
+  actualPhoneme     String
+  errorCount        Int      @default(1)
+  lastOccurredAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, intendedPhoneme, actualPhoneme])
+  @@index([userId, lastOccurredAt])
 }

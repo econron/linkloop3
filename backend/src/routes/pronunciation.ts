@@ -7,11 +7,25 @@ import path from 'path';
 import fs from 'fs';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
+import { PrismaClient } from '@prisma/client';
+import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
+import { marshall } from '@aws-sdk/util-dynamodb';
+import { updatePronunciationSummary, getPronunciationSummary } from '../services/pronunciation';
 
 ffmpeg.setFfmpegPath(ffmpegPath as string);
 
 const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY!;
 const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION!;
+const prisma = new PrismaClient();
+
+const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE || 'PronunciationRawResults';
+const dynamoClient = new DynamoDBClient({
+  region: process.env.AWS_REGION || 'ap-northeast-1',
+  endpoint: process.env.DYNAMODB_ENDPOINT, // ローカル用
+  credentials: process.env.DYNAMODB_ENDPOINT
+    ? { accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'dummy', secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'dummy' }
+    : undefined,
+});
 
 async function convertToWav(inputPath: string, outputPath: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -121,6 +135,164 @@ const pronunciationRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
         throw error;
       }
     },
+  });
+
+  // 発音評価のアドバンストエンドポイント
+  fastify.post('/pronunciation-assessment-advanced', async (request, reply) => {
+    const parts = request.parts();
+    let audioFile: any = null;
+    let referenceText: string | null = null;
+    const tempDir = path.join(process.cwd(), 'uploads');
+    await fs.promises.mkdir(tempDir, { recursive: true });
+    let tempFile = '';
+    let convertedPath = '';
+
+    for await (const part of parts) {
+      if (part.type === 'file' && part.fieldname === 'audio') {
+        tempFile = path.join(tempDir, `temp_${Date.now()}_${part.filename}`);
+        const ws = fs.createWriteStream(tempFile);
+        await pipeline(part.file, ws);
+        audioFile = tempFile;
+      } else if (part.type === 'field' && part.fieldname === 'referenceText') {
+        referenceText = part.value as string;
+      }
+    }
+
+    if (!audioFile || !referenceText) {
+      if (audioFile) {
+        try { await fs.promises.unlink(audioFile); } catch {}
+      }
+      return reply.status(400).send({ error: 'audio and referenceText required' });
+    }
+
+    convertedPath = path.join(tempDir, `converted_${Date.now()}.wav`);
+    try {
+      await convertToWav(audioFile, convertedPath);
+      const pushStream = sdk.AudioInputStream.createPushStream();
+      const fileStream = fs.createReadStream(convertedPath);
+      await pipeline(fileStream, async function* (source) {
+        for await (const chunk of source) {
+          const arrayBuffer = Buffer.isBuffer(chunk)
+            ? new Uint8Array(chunk).buffer
+            : Buffer.from(chunk).buffer;
+          pushStream.write(arrayBuffer);
+        }
+        pushStream.close();
+      });
+
+      const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+      const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+      speechConfig.speechRecognitionLanguage = 'en-US';
+
+      const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
+        referenceText,
+        sdk.PronunciationAssessmentGradingSystem.HundredMark,
+        sdk.PronunciationAssessmentGranularity.Phoneme,
+        true // enableMiscue: true (advanced)
+      );
+      pronunciationConfig.enableProsodyAssessment = true;
+      pronunciationConfig.nbestPhonemeCount = 5;
+
+      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+      pronunciationConfig.applyTo(recognizer);
+
+      const result = await new Promise((resolve, reject) => {
+        recognizer.recognizeOnceAsync(
+          (result: any) => {
+            if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+              resolve(JSON.parse(result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)));
+            } else {
+              reject(new Error('Recognition failed: ' + result.errorDetails));
+            }
+            recognizer.close();
+          },
+          (err: any) => {
+            reject(new Error('Recognition error: ' + err));
+            recognizer.close();
+          }
+        );
+      });
+
+      // 発音の癖を集計
+      const userId = request.headers['x-user-id'] as string;
+      if (userId) {
+        await updatePronunciationSummary(userId, result as any);
+      }
+
+      // 一時ファイルの削除
+      try { await fs.promises.unlink(audioFile); } catch {}
+      try { await fs.promises.unlink(convertedPath); } catch {}
+
+      return reply.send(result);
+    } catch (error) {
+      try { await fs.promises.unlink(audioFile); } catch {}
+      try { await fs.promises.unlink(convertedPath); } catch {}
+      return reply.status(500).send({ error: 'Processing error', details: String(error) });
+    }
+  });
+
+  // 発音の癖集計を取得するエンドポイント
+  fastify.get('/pronunciation-assessment/summary', async (request, reply) => {
+    const userId = request.headers['x-user-id'] as string;
+    if (!userId) {
+      return reply.status(401).send({ error: 'User ID is required' });
+    }
+
+    try {
+      const summary = await getPronunciationSummary(userId);
+      return reply.send(summary);
+    } catch (error) {
+      return reply.status(500).send({ error: 'Failed to get pronunciation summary', details: String(error) });
+    }
+  });
+
+  // DynamoDB保存API
+  fastify.post('/pronunciation-assessment/save-raw', async (request, reply) => {
+    const { userId, unitId, phrase, rawResult } = request.body as {
+      userId: string;
+      unitId: string;
+      phrase: string;
+      rawResult: any;
+    };
+    const timestamp = new Date().toISOString();
+    if (!userId || !unitId || !phrase || !rawResult) {
+      return reply.status(400).send({ error: 'userId, unitId, phrase, rawResult are required' });
+    }
+    try {
+      const item = marshall({
+        userId,
+        unitId,
+        phrase,
+        timestamp,
+        rawResult,
+      });
+      await dynamoClient.send(new PutItemCommand({
+        TableName: DYNAMODB_TABLE,
+        Item: item,
+      }));
+      return reply.send({ success: true });
+    } catch (error) {
+      return reply.status(500).send({ success: false, error: String(error) });
+    }
+  });
+
+  // RDB集計保存API
+  fastify.post('/pronunciation-assessment/save-summary', async (request, reply) => {
+    const { userId, azureResponse } = request.body as {
+      userId: string;
+      azureResponse: any;
+    };
+
+    if (!userId || !azureResponse) {
+      return reply.status(400).send({ error: 'userId and azureResponse are required' });
+    }
+
+    try {
+      await updatePronunciationSummary(userId, azureResponse);
+      return reply.send({ success: true });
+    } catch (error) {
+      return reply.status(500).send({ error: 'Failed to save pronunciation summary', details: String(error) });
+    }
   });
 };
 
