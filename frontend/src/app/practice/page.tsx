@@ -204,6 +204,40 @@ export default function PracticePage() {
     }
   };
 
+  // r/lミス箇所ハイライト用の関数
+  function getRLHighlightElements(assessmentResult: any) {
+    if (!assessmentResult?.NBest?.[0]?.Words) return null;
+    const words = assessmentResult.NBest[0].Words;
+    const displayText = assessmentResult.DisplayText || words.map((w: any) => w.Word).join(' ');
+    // ミスがあった単語インデックスを特定
+    const mistakeWordIndexes = new Set<number>();
+    words.forEach((word: any, wIdx: number) => {
+      if (!word?.Phonemes) return;
+      for (const phoneme of word.Phonemes) {
+        if ((phoneme.Phoneme === 'r' || phoneme.Phoneme === 'l') && phoneme.PronunciationAssessment) {
+          const nBest = phoneme.PronunciationAssessment.NBestPhonemes;
+          if (Array.isArray(nBest) && nBest.length > 0 && nBest[0].Phoneme !== phoneme.Phoneme) {
+            mistakeWordIndexes.add(wIdx);
+          }
+        }
+      }
+    });
+    // DisplayTextを単語ごとに分割し、ミスがあった単語を色付け
+    const displayWords = displayText.split(/\s+/);
+    return displayWords.map((word: string, idx: number) => (
+      <span
+        key={idx}
+        className={
+          mistakeWordIndexes.has(idx)
+            ? 'bg-red-200 text-red-800 font-bold rounded px-1 mx-0.5'
+            : 'text-black'
+        }
+      >
+        {word + ' '}
+      </span>
+    ));
+  }
+
   return (
     <div className="max-w-xl mx-auto p-8 space-y-8">
       <h1 className="text-2xl font-bold">発音練習</h1>
@@ -248,6 +282,11 @@ export default function PracticePage() {
         {assessmentResult && !error && (
           <div className="mt-4">
             <div className="text-lg font-medium mb-2 text-blue-900">評価結果:</div>
+            {/* r/lミス箇所ハイライト表示 */}
+            <div className="mb-2">
+              <span className="text-sm text-black">r/lミス箇所ハイライト: </span>
+              {getRLHighlightElements(assessmentResult)}
+            </div>
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="grid grid-cols-2 gap-4">
                 <div>
