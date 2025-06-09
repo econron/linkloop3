@@ -15,6 +15,9 @@ const practicePhrases = [
 
 const USER_ID = 'test-user'; // TODO: 実装時は動的に
 
+// レッスン対象発音記号
+const lessonPhonemes = ['r', 'l'];
+
 export default function PracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -40,6 +43,7 @@ export default function PracticePage() {
   const [sessionXp, setSessionXp] = useState(0);
   const [sessionMaxCombo, setSessionMaxCombo] = useState(0);
   const [bonusBreakdown, setBonusBreakdown] = useState<{ base: number; combo: number; fever: number }>({ base: 0, combo: 0, fever: 0 });
+  const [feverMsg, setFeverMsg] = useState('');
 
   // 録音開始
   const startRecording = async () => {
@@ -105,10 +109,33 @@ export default function PracticePage() {
       
       // PronScoreまたはAccuracyScoreでフィードバック
       const pronScore = data?.NBest?.[0]?.PronunciationAssessment?.PronScore ?? 0;
-      console.log('Pronunciation score:', pronScore);
-      
-      // XP計算: pronScoreをそのままXPに（例）
-      const gainedXp = Math.round(pronScore);
+      // accuracy score & phoneme抽出
+      const phonemeResults: { phoneme: string; accuracy: number }[] = [];
+      const words = data?.NBest?.[0]?.Words ?? [];
+      words.forEach((word: any) => {
+        (word.Phonemes ?? []).forEach((p: any) => {
+          phonemeResults.push({ phoneme: p.Phoneme, accuracy: p.PronunciationAssessment?.AccuracyScore ?? 0 });
+        });
+      });
+      // 対象発音記号で高精度
+      const hitTarget = phonemeResults.some(
+        p => lessonPhonemes.includes(p.phoneme) && p.accuracy >= 90
+      );
+      // それ以外で高精度
+      const hitOther = phonemeResults.some(
+        p => !lessonPhonemes.includes(p.phoneme) && p.accuracy >= 90
+      );
+      let xpMultiplier = 1;
+      let feverMsg = '';
+      if (hitTarget) {
+        xpMultiplier = 2;
+        feverMsg = 'レッスン対象発音でフィーバー！XP2倍！';
+      } else if (hitOther) {
+        xpMultiplier = 0.5;
+        feverMsg = '高精度発音で+0.5倍ボーナス！';
+      }
+      const baseXp = Math.round(pronScore);
+      const gainedXp = Math.round(baseXp * xpMultiplier);
       setXpGain(gainedXp);
       setXpAnimKey(prev => prev + 1); // アニメーション用
       // ボーナス計算
@@ -119,7 +146,6 @@ export default function PracticePage() {
         combo: prev.combo + comboBonus,
         fever: prev.fever + feverBonus,
       }));
-      // セッション合計XP・最大コンボ管理
       setSessionXp(prev => prev + gainedXp + comboBonus + feverBonus);
       setSessionMaxCombo(prev => Math.max(prev, combo));
       // コンボ・フィーバー管理
@@ -151,6 +177,7 @@ export default function PracticePage() {
       }
       console.log('Setting feedback message:', feedbackMessage);
       setFeedback(feedbackMessage);
+      setFeverMsg(feverMsg); // UI用
 
       // 2. DynamoDBに生データ保存
       try {
@@ -385,7 +412,7 @@ export default function PracticePage() {
           <div className="mt-4 text-red-600">{aiFeedbackError}</div>
         )}
       </div>
-      {/* コンボゲージ・XPアニメーション */}
+      {/* コンボゲージ・XPアニメーション・フィーバーメッセージ */}
       <div className="mb-4 flex items-center gap-4">
         <div className="flex-1">
           <div className="text-xs text-gray-500">COMBO</div>
@@ -394,6 +421,7 @@ export default function PracticePage() {
           </div>
           <div className="text-sm text-pink-700 font-bold mt-1">{combo}x</div>
           {fever && <div className="text-xs text-yellow-500 font-bold animate-pulse">FEVER!</div>}
+          {feverMsg && <div className="text-xs text-blue-600 font-bold mt-1 animate-bounce">{feverMsg}</div>}
         </div>
         {xpGain !== null && (
           <div key={xpAnimKey} className="text-2xl font-bold text-yellow-500 animate-bounce">
