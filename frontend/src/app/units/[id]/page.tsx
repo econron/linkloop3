@@ -277,7 +277,7 @@ export default function UnitPage() {
             </div>
             {audioUrl && (
               <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">録音音声:</h3>
+                <h3 className="text-lg font-semibold mb-2 text-black">録音音声:</h3>
                 <audio controls src={audioUrl} className="w-full" />
               </div>
             )}
@@ -292,23 +292,23 @@ export default function UnitPage() {
             )}
             {assessmentResult && (
               <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-2">評価結果:</h3>
+                <h3 className="text-lg font-semibold mb-2 text-black">評価結果:</h3>
                 <div className="bg-gray-100 p-4 rounded-lg space-y-6">
                   <div>
-                    <h4 className="font-medium mb-2">スコア:</h4>
+                    <h4 className="font-medium mb-2 text-black">スコア:</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-black">正確性</p>
-                        <p className="text-xl font-bold">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore}%</p>
+                        <p className="text-xl font-bold text-blue-700">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore}%</p>
                       </div>
                       <div>
                         <p className="text-sm text-black">流暢さ</p>
-                        <p className="text-xl font-bold">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore}%</p>
+                        <p className="text-xl font-bold text-blue-700">{assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore}%</p>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">フィードバック:</h4>
+                    <h4 className="font-medium mb-2 text-black">フィードバック:</h4>
                     <div className="space-y-2">
                       {isGeneratingFeedback ? (
                         <div className="bg-white p-3 rounded">
