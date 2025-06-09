@@ -5,7 +5,8 @@ interface PhonemeCardProps {
   arpabet: string;
   example: string;
   status: 'not_started' | 'in_progress' | 'completed';
-  averageScore?: number;
+  count?: number;
+  scoreMode?: number;
 }
 
 export const PhonemeCard = ({
@@ -13,7 +14,8 @@ export const PhonemeCard = ({
   arpabet,
   example,
   status,
-  averageScore,
+  count,
+  scoreMode,
 }: PhonemeCardProps) => {
   const getStatusColor = () => {
     switch (status) {
@@ -47,22 +49,21 @@ export const PhonemeCard = ({
           </div>
           <p className="mt-1 text-sm text-black">例: {example}</p>
         </div>
-        <span className={`ml-4 rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor()}`}>
-          {getStatusText()}
-        </span>
       </div>
 
-      {status !== 'not_started' && averageScore !== undefined && (
+      {count !== undefined && (
         <div className="mt-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-black">平均スコア</span>
-            <span className="text-sm font-medium text-black">{averageScore}%</span>
+            <span className="text-sm text-black">発音回数</span>
+            <span className={`text-sm ${count > 0 ? 'text-blue-700 font-bold' : 'text-black font-medium'}`}>{count} 回</span>
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full rounded-full bg-blue-600 transition-all"
-              style={{ width: `${averageScore}%` }}
-            />
+        </div>
+      )}
+      {scoreMode !== undefined && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-black">最頻スコア</span>
+            <span className={`text-sm font-bold ${scoreMode >= 79 ? 'text-green-700' : 'text-red-600'}`}>{scoreMode} 点</span>
           </div>
         </div>
       )}
