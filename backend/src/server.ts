@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import pronunciationRoutes from './routes/pronunciation';
 import unitProgressRoutes from './routes/unitProgress';
+import gamificationRoutes from './routes/gamification';
 
 const server = fastify({
   logger: true,
@@ -24,6 +25,7 @@ server.register(multipart, {
 // ルートの登録
 server.register(pronunciationRoutes, { prefix: '/api' });
 server.register(unitProgressRoutes, { prefix: '/api' });
+server.register(gamificationRoutes, { prefix: '/api' });
 
 // サーバーの起動
 const start = async () => {

@@ -21,7 +21,11 @@ model User {
   phonemeProgress PhonemeProgress[]
   phonemeErrorSummaries PhonemeErrorSummary[]
   pronunciationHabits PronunciationHabit[]
-  analyses PronunciationAnalysis[]
+  analyses        PronunciationAnalysis[]
+  experienceHistories ExperienceHistory[]
+  comboHistories  ComboHistory[]
+  questProgresses QuestProgress[]
+  rankingCache    RankingCache?
 }
 
 model UnitProgress {
@@ -113,4 +117,52 @@ model PronunciationFinding {
   createdAt   DateTime @default(now())
 
   analysis    PronunciationAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+}
+
+model ExperienceHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model ComboHistory {
+  id         String   @id @default(uuid())
+  userId     String
+  comboCount Int
+  feverTime  Boolean
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model QuestProgress {
+  id         String   @id @default(uuid())
+  userId     String
+  questId    String
+  type       String   // 'daily' | 'weekly' | 'achievement'
+  progress   Int
+  target     Int
+  completed  Boolean  @default(false)
+  rewardXp   Int
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, questId])
+  @@index([userId, type, completed])
+}
+
+model RankingCache {
+  userId    String   @id
+  totalXp   Int
+  weeklyXp  Int
+  dailyXp   Int
+  rank      Int
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
 }

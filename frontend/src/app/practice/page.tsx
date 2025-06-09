@@ -2,6 +2,7 @@
 import React from "react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { postXpHistory, postQuestProgress } from '../../lib/api';
 
 // r/lフレーズ5つ（サンプル）
 const practicePhrases = [
@@ -11,6 +12,8 @@ const practicePhrases = [
   "All is well that ends well.",
   "alive (dead or alive)"
 ];
+
+const USER_ID = 'test-user'; // TODO: 実装時は動的に
 
 export default function PracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -29,6 +32,14 @@ export default function PracticePage() {
   const chunksRef = useRef<Blob[]>([]);
   const router = useRouter();
   const [aiFeedbackSections, setAiFeedbackSections] = useState<any[]>([]);
+  const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const [fever, setFever] = useState(false);
+  const [xpGain, setXpGain] = useState<number | null>(null);
+  const [xpAnimKey, setXpAnimKey] = useState(0);
+  const [sessionXp, setSessionXp] = useState(0);
+  const [sessionMaxCombo, setSessionMaxCombo] = useState(0);
+  const [bonusBreakdown, setBonusBreakdown] = useState<{ base: number; combo: number; fever: number }>({ base: 0, combo: 0, fever: 0 });
 
   // 録音開始
   const startRecording = async () => {
@@ -96,6 +107,42 @@ export default function PracticePage() {
       const pronScore = data?.NBest?.[0]?.PronunciationAssessment?.PronScore ?? 0;
       console.log('Pronunciation score:', pronScore);
       
+      // XP計算: pronScoreをそのままXPに（例）
+      const gainedXp = Math.round(pronScore);
+      setXpGain(gainedXp);
+      setXpAnimKey(prev => prev + 1); // アニメーション用
+      // ボーナス計算
+      const comboBonus = combo > 0 ? combo * 2 : 0;
+      const feverBonus = fever ? Math.round(gainedXp * 0.5) : 0;
+      setBonusBreakdown(prev => ({
+        base: prev.base + gainedXp,
+        combo: prev.combo + comboBonus,
+        fever: prev.fever + feverBonus,
+      }));
+      // セッション合計XP・最大コンボ管理
+      setSessionXp(prev => prev + gainedXp + comboBonus + feverBonus);
+      setSessionMaxCombo(prev => Math.max(prev, combo));
+      // コンボ・フィーバー管理
+      if (pronScore >= 70) {
+        setCombo(prev => {
+          const next = prev + 1;
+          setMaxCombo(m => Math.max(m, next));
+          if (next > 0 && next % 5 === 0) setFever(true);
+          return next;
+        });
+      } else {
+        setCombo(0);
+        setFever(false);
+      }
+      // XP加算API
+      try {
+        await postXpHistory(USER_ID, gainedXp, fever ? 'fever' : 'practice');
+      } catch (e) { /* エラー握りつぶし */ }
+      // クエスト進捗API（例: quest-practice）
+      try {
+        await postQuestProgress(USER_ID, 'quest-practice', 1);
+      } catch (e) { /* エラー握りつぶし */ }
+      // フィードバック
       let feedbackMessage = "Nice!";
       if (pronScore >= 90) {
         feedbackMessage = "Super!";
@@ -200,6 +247,12 @@ export default function PracticePage() {
       setAiFeedbackError(null);
       setIsLoadingAiFeedback(false);
     } else {
+      // 練習完了時にlocalStorageにサマリー保存＆API保存
+      localStorage.setItem('lastPracticeXp', String(sessionXp));
+      localStorage.setItem('lastPracticeMaxCombo', String(sessionMaxCombo));
+      localStorage.setItem('lastPracticeBonus', JSON.stringify(bonusBreakdown));
+      // 必要ならAPIでまとめて保存（例: postXpHistory(USER_ID, sessionXp, 'session')）
+      // await postXpHistory(USER_ID, sessionXp, 'session');
       router.push("/practice/complete");
     }
   };
@@ -331,6 +384,24 @@ export default function PracticePage() {
         {aiFeedbackError && (
           <div className="mt-4 text-red-600">{aiFeedbackError}</div>
         )}
+      </div>
+      {/* コンボゲージ・XPアニメーション */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="flex-1">
+          <div className="text-xs text-gray-500">COMBO</div>
+          <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-pink-400 transition-all" style={{ width: `${Math.min(combo * 20, 100)}%` }} />
+          </div>
+          <div className="text-sm text-pink-700 font-bold mt-1">{combo}x</div>
+          {fever && <div className="text-xs text-yellow-500 font-bold animate-pulse">FEVER!</div>}
+        </div>
+        {xpGain !== null && (
+          <div key={xpAnimKey} className="text-2xl font-bold text-yellow-500 animate-bounce">
+            +{xpGain} XP
+          </div>
+        )}
+        <div className="text-xs text-gray-500">MAX</div>
+        <div className="text-lg font-bold text-purple-700">{maxCombo}x</div>
       </div>
     </div>
   );
