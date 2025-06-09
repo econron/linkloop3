@@ -48,7 +48,7 @@ export default function PracticeCompletePage() {
 
   return (
     <div className="max-w-xl mx-auto p-8 flex flex-col items-center justify-center min-h-[60vh]">
-      <h1 className="text-3xl font-bold mb-6 text-green-600">練習完了！</h1>
+      <h1 className="text-3xl font-bold mb-6 text-green-600">おめでとうございます！</h1>
       <div className="mb-6 w-full">
         <div className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
           <div className="text-lg font-bold text-blue-700 mb-2">今回の成果</div>
