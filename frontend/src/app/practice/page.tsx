@@ -200,6 +200,11 @@ export default function PracticePage() {
       console.log('Setting feedback message:', feedbackMessage);
       setFeedback(feedbackMessage);
       setFeverMsg(feverMsg); // UI用
+      // 発音評価1件完了時に効果音再生
+      try {
+        const audio = new Audio('/sound/practicedone.mp3');
+        audio.play();
+      } catch (e) { /* 再生失敗時は無視 */ }
 
       // 2. DynamoDBに生データ保存
       try {
