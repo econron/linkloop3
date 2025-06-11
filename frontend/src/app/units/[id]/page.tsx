@@ -234,7 +234,7 @@ export default function UnitPage() {
   };
 
   const handleNext = () => {
-    router.push(`/practice`);
+    router.push(`/lesson-preview`);
   };
 
   return (

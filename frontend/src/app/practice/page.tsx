@@ -1,24 +1,47 @@
 "use client";
 import React from "react";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { postXpHistory, postQuestProgress } from '../../lib/api';
 
-// r/lフレーズ5つ（サンプル）
-const practicePhrases = [
-  "Actions speak louder than words.",
-  "The early bird catches the worm.",
-  "call for",
-  "All is well that ends well.",
-  "alive (dead or alive)"
-];
+const lessonConfigs: Record<string, { phonemes: string[]; phrases: string[] }> = {
+  'rl': {
+    phonemes: ['r', 'l'],
+    phrases: [
+      'Really lucky rabbit.',
+      'Roll the red ball.',
+      'Light and right.',
+    ]
+  },
+  'th': {
+    phonemes: ['θ', 'ð'],
+    phrases: [
+      'Think about it carefully.',
+      'This is the best thing.',
+      'Thank you for everything.'
+    ]
+  },
+  'vf': {
+    phonemes: ['v', 'f'],
+    phrases: [
+      'Very funny video.',
+      'Five vivid flowers.',
+      'Voice and face.'
+    ]
+  }
+};
 
 const USER_ID = 'test-user'; // TODO: 実装時は動的に
 
-// レッスン対象発音記号
-const lessonPhonemes = ['r', 'l'];
-
 export default function PracticePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawLessonKey = searchParams.get('lesson');
+  const lessonKeys = Object.keys(lessonConfigs);
+  const lessonKey = (rawLessonKey && lessonKeys.includes(rawLessonKey)) ? rawLessonKey : 'th';
+  const lesson = lessonConfigs[lessonKey] || lessonConfigs['th'];
+  const lessonPhonemes = lesson.phonemes;
+  const practicePhrases = lesson.phrases;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -33,7 +56,6 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const router = useRouter();
   const [aiFeedbackSections, setAiFeedbackSections] = useState<any[]>([]);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
