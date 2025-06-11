@@ -3,6 +3,17 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Userデータの作成
+  const user = await prisma.user.create({
+    data: {
+      id: 'test-user',
+      createdAt: new Date(),
+      lastLoginAt: new Date(),
+    },
+  });
+
+  console.log('Created user:', user);
+
   // Unitデータの作成
   const unit = await prisma.unit.create({
     data: {
