@@ -4,37 +4,50 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UnitCard } from '@/components/course/UnitCard';
 import { getUserRanking, getRanking, getQuests, getXpHistory } from '../lib/api';
+import { curriculumData } from '@/data/curriculum';
+import { CompetencyStage } from '@/types/curriculum';
 
-// 仮のデータ（後でAPIから取得するように変更）
-const mockUnits = [
-  {
-    id: '1',
-    title: 'Unit 1: 基本的な発音',
-    description: 'rとlの発音の違いを学びます',
-    status: 'unlocked' as const,
-    progress: 0,
-  },
-  {
-    id: '2',
-    title: 'Unit 2: 単語の発音',
-    description: '基本的な単語での発音練習',
-    status: 'locked' as const,
-    progress: 0,
-  },
-  {
-    id: '3',
-    title: 'Unit 3: 文章の発音',
-    description: '文章での発音練習',
-    status: 'locked' as const,
-    progress: 0,
-  },
-];
+// カリキュラムデータから段階別ユニットを生成
+const generateUnitsFromCurriculum = () => {
+  const units: Array<{
+    id: string;
+    title: string;
+    description: string;
+    status: 'unlocked' | 'locked' | 'completed';
+    progress: number;
+    competencyId: string;
+    stageType: 'lecture' | 'perception' | 'production';
+  }> = [];
+
+  curriculumData.competencies.forEach((competency) => {
+    competency.stages.forEach((stage, stageIndex) => {
+      const stageTypeNames = {
+        lecture: '講義',
+        perception: '知覚練習',
+        production: '発音練習'
+      };
+
+      units.push({
+        id: stage.id,
+        title: `${competency.title} - ${stageTypeNames[stage.type]}`,
+        description: stage.description,
+        // status: stage.unlocked ? 'unlocked' : 'locked',
+        status: 'unlocked',
+        progress: stage.completed ? 100 : 0,
+        competencyId: competency.id,
+        stageType: stage.type
+      });
+    });
+  });
+
+  return units;
+};
 
 const USER_ID = 'test-user'; // TODO: 実装時は動的に
 
 export default function HomePage() {
   const router = useRouter();
-  const [units, setUnits] = useState(mockUnits);
+  const [units, setUnits] = useState(() => generateUnitsFromCurriculum());
   // 追加: ゲーミフィケーション用state
   const [xp, setXp] = useState<number>(0);
   const [rank, setRank] = useState<number | null>(null);
@@ -58,7 +71,21 @@ export default function HomePage() {
   }, []);
 
   const handleUnitClick = (unitId: string) => {
-    router.push(`/units/${unitId}`);
+    const unit = units.find(u => u.id === unitId);
+    if (!unit) return;
+
+    // 段階に応じて適切なページに遷移
+    switch (unit.stageType) {
+      case 'lecture':
+        router.push(`/units/${unitId}`);
+        break;
+      case 'perception':
+        router.push(`/quiz/${unitId}`);
+        break;
+      case 'production':
+        router.push(`/practice/${unitId}`);
+        break;
+    }
   };
 
   return (

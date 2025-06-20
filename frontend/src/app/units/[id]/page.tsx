@@ -1,26 +1,36 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { curriculumData } from '@/data/curriculum';
+import { CompetencyStage, Competency } from '@/types/curriculum';
 
 export default function UnitPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  console.log('UnitPage params:', { 
-    params, 
-    id, 
-    type: typeof id,
-    rawParams: JSON.stringify(params),
-    rawId: params.id,
-    rawIdType: typeof params.id
-  });
+  
+  const [stage, setStage] = useState<CompetencyStage | null>(null);
+  const [competency, setCompetency] = useState<Competency | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoComplete, setIsVideoComplete] = useState(false);
   const [isInteractive, setIsInteractive] = useState(false);
   const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
   const [isPausedForPractice, setIsPausedForPractice] = useState(false);
+
+  useEffect(() => {
+    // カリキュラムデータから該当ステージを見つける
+    for (const comp of curriculumData.competencies) {
+      const foundStage = comp.stages.find(s => s.id === id);
+      if (foundStage) {
+        setStage(foundStage);
+        setCompetency(comp);
+        break;
+      }
+    }
+  }, [id]);
 
   // 録音・評価用state
   const [isRecording, setIsRecording] = useState(false);
@@ -234,15 +244,57 @@ export default function UnitPage() {
   };
 
   const handleNext = () => {
-    router.push(`/practice/preview`);
+    if (!stage || !competency) return;
+    
+    // 次のステージまたは完了ページに遷移
+    const currentStageIndex = competency.stages.findIndex(s => s.id === stage.id);
+    if (currentStageIndex < competency.stages.length - 1) {
+      const nextStage = competency.stages[currentStageIndex + 1];
+      if (nextStage.type === 'perception') {
+        router.push(`/quiz/${nextStage.id}`);
+      } else if (nextStage.type === 'production') {
+        router.push(`/practice/${nextStage.id}`);
+      } else {
+        router.push(`/units/${nextStage.id}`);
+      }
+    } else {
+      router.push('/');
+    }
   };
+
+  if (!stage || !competency) {
+    return <div>Loading...</div>;
+  }
+
+  if (stage.type !== 'lecture') {
+    return <div>This page is only for lecture stages</div>;
+  }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black">{unitData.title}</h1>
-        <p className="mt-2 text-sm text-black">{unitData.description}</p>
+        <h1 className="text-2xl font-bold text-black">{competency.title} - {stage.title}</h1>
+        <p className="mt-2 text-sm text-black">{stage.description}</p>
+        <p className="mt-4 text-sm text-gray-600 bg-blue-50 p-4 rounded-lg">
+          <strong>コンピテンシー:</strong> {stage.competency}
+        </p>
       </div>
+
+      {stage.content?.lecture && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">{stage.content.lecture.title}</h2>
+          <ul className="space-y-3">
+            {stage.content.lecture.points.map((point, index) => (
+              <li key={index} className="flex items-start">
+                <span className="inline-block w-6 h-6 bg-blue-500 text-white rounded-full text-sm flex items-center justify-center mr-3 mt-0.5">
+                  {index + 1}
+                </span>
+                <span className="text-gray-700">{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
         <video

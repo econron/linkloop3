@@ -11,7 +11,6 @@ export const Navigation = () => {
   const navigationItems = [
     { name: 'ホーム', href: '/' },
     { name: '発音記号', href: '/phonemes' },
-    { name: 'R/L クイズ', href: '/quiz' },
   ];
 
   return (
