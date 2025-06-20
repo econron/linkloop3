@@ -23,6 +23,7 @@ export default function PracticeStagePage() {
   const [scores, setScores] = useState<number[]>([]);
   const [earnedXP, setEarnedXP] = useState(0);
   const [showXPGain, setShowXPGain] = useState(false);
+  const [phonemeAnalysis, setPhonemeAnalysis] = useState<any[]>([]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -38,6 +39,54 @@ export default function PracticeStagePage() {
       }
     }
   }, [id]);
+
+  // Analyze phoneme data from Azure response
+  const analyzePhonemes = (azureResponse: any, targetPhonemes: string[]) => {
+    const analysis: any[] = [];
+    
+    try {
+      const words = azureResponse?.NBest?.[0]?.Words || [];
+      
+      words.forEach((word: any) => {
+        const phonemes = word?.Phonemes || [];
+        
+        phonemes.forEach((phoneme: any) => {
+          const phonemeSymbol = phoneme?.Phoneme;
+          const accuracyScore = phoneme?.PronunciationAssessment?.AccuracyScore || 0;
+          const nbestPhonemes = phoneme?.PronunciationAssessment?.NBestPhonemes || [];
+          
+          // Check if this phoneme is one of our target phonemes (l, r, etc.)
+          const isTargetPhoneme = targetPhonemes.some(target => 
+            target.toLowerCase().includes(phonemeSymbol?.toLowerCase()) ||
+            phonemeSymbol?.toLowerCase().includes(target.toLowerCase().replace(/[\/]/g, ''))
+          );
+          
+          if (isTargetPhoneme && accuracyScore <= 90) {
+            // Get alternative phonemes that scored higher
+            const alternatives = nbestPhonemes
+              .filter((alt: any) => alt?.Score > accuracyScore)
+              .slice(0, 3)
+              .map((alt: any) => ({
+                phoneme: alt?.Phoneme,
+                score: alt?.Score
+              }));
+            
+            analysis.push({
+              targetPhoneme: phonemeSymbol,
+              accuracyScore,
+              alternatives,
+              word: word?.Word,
+              isLowScore: accuracyScore <= 90
+            });
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error analyzing phonemes:', error);
+    }
+    
+    return analysis;
+  };
 
   // 録音開始
   const startRecording = async () => {
@@ -99,8 +148,11 @@ export default function PracticeStagePage() {
       const accuracy = data.NBest?.[0]?.PronunciationAssessment?.AccuracyScore || 0;
       setScores(prev => [...prev, accuracy]);
       
-      // Update phoneme scores and calculate XP
+      // Analyze phonemes for detailed feedback
       if (stage?.content?.practice?.targetPhonemes) {
+        const analysis = analyzePhonemes(data, stage.content.practice.targetPhonemes);
+        setPhonemeAnalysis(analysis);
+        
         // Update phoneme scores
         for (const phoneme of stage.content.practice.targetPhonemes) {
           updatePhonemeScore(phoneme, accuracy);
@@ -147,6 +199,7 @@ export default function PracticeStagePage() {
       setAudioUrl(null);
       setAudioBlob(null);
       setAssessmentResult(null);
+      setPhonemeAnalysis([]);
     } else {
       // Practice completed
       const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -265,20 +318,78 @@ export default function PracticeStagePage() {
                     <p className="text-sm">{assessmentResult.details}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Accuracy</p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore || 0}%
-                      </p>
+                  <>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Accuracy</p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore || 0}%
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Fluency</p>
+                        <p className="text-3xl font-bold text-green-600">
+                          {assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore || 0}%
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Fluency</p>
-                      <p className="text-3xl font-bold text-green-600">
-                        {assessmentResult.NBest?.[0]?.PronunciationAssessment?.FluencyScore || 0}%
-                      </p>
-                    </div>
-                  </div>
+
+                    {/* Detailed Phoneme Feedback */}
+                    {phonemeAnalysis.length > 0 && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                        <h4 className="font-semibold text-orange-800 mb-3 flex items-center">
+                          <span className="mr-2">🎯</span>
+                          Pronunciation Focus Areas
+                        </h4>
+                        <div className="space-y-3">
+                          {phonemeAnalysis.map((analysis, index) => (
+                            <div key={index} className="bg-white rounded-lg p-3 border border-orange-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-800">
+                                    /{analysis.targetPhoneme}/ in "{analysis.word}"
+                                  </span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    analysis.accuracyScore >= 70 
+                                      ? 'bg-yellow-100 text-yellow-800' 
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {analysis.accuracyScore}%
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {analysis.alternatives.length > 0 && (
+                                <div className="text-sm">
+                                  <p className="text-gray-600 mb-1">System detected these sounds instead:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {analysis.alternatives.map((alt: any, altIndex: number) => (
+                                      <span key={altIndex} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                        /{alt.phoneme}/ ({alt.score}%)
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-2 text-xs text-orange-700">
+                                💡 Focus on the correct tongue position for /{analysis.targetPhoneme}/
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {phonemeAnalysis.length === 0 && assessmentResult.NBest?.[0]?.PronunciationAssessment?.AccuracyScore >= 70 && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-center text-green-800">
+                          <span className="text-xl mr-2">✅</span>
+                          <span className="font-medium">Great pronunciation! All target phonemes sound accurate.</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 
                 <button
