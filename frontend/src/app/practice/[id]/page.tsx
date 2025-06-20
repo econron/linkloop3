@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { curriculumData } from '@/data/curriculum';
 import { CompetencyStage, Competency } from '@/types/curriculum';
 import confetti from 'canvas-confetti';
+import { addXP, updatePhonemeScore, calculatePracticeXP, markStageCompleted, XP_REWARDS } from '@/lib/gamification';
 
 export default function PracticeStagePage() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function PracticeStagePage() {
   const [assessmentResult, setAssessmentResult] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
   const [scores, setScores] = useState<number[]>([]);
+  const [earnedXP, setEarnedXP] = useState(0);
+  const [showXPGain, setShowXPGain] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -96,6 +99,25 @@ export default function PracticeStagePage() {
       const accuracy = data.NBest?.[0]?.PronunciationAssessment?.AccuracyScore || 0;
       setScores(prev => [...prev, accuracy]);
       
+      // Update phoneme scores and calculate XP
+      if (stage?.content?.practice?.targetPhonemes) {
+        // Update phoneme scores
+        for (const phoneme of stage.content.practice.targetPhonemes) {
+          updatePhonemeScore(phoneme, accuracy);
+        }
+        
+        // Calculate and award XP
+        const xpGained = calculatePracticeXP(accuracy, stage.content.practice.targetPhonemes);
+        if (xpGained > 0) {
+          addXP(xpGained);
+          setEarnedXP(xpGained);
+          setShowXPGain(true);
+          
+          // Hide XP gain after 3 seconds
+          setTimeout(() => setShowXPGain(false), 3000);
+        }
+      }
+      
       // Play success sound and confetti if the score is good (70+ points)
       if (accuracy >= 70) {
         const audio = new Audio('/sound/practicedone.mp3');
@@ -134,6 +156,10 @@ export default function PracticeStagePage() {
         // Play success sound
         const audio = new Audio('/sound/practicedone.mp3');
         audio.play().catch(e => console.error('Success audio play failed:', e));
+        
+        // Award completion bonus XP
+        addXP(XP_REWARDS.PRACTICE_COMPLETE);
+        markStageCompleted(stage.id);
       }
       
       // Return to home
@@ -155,6 +181,19 @@ export default function PracticeStagePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
       <div className="max-w-4xl mx-auto">
+        {/* XP Gain Notification */}
+        {showXPGain && (
+          <div className="fixed top-4 right-4 bg-yellow-400 text-yellow-900 px-6 py-3 rounded-lg shadow-lg animate-bounce z-50">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⭐</span>
+              <span className="font-bold">+{earnedXP} XP</span>
+              {earnedXP >= XP_REWARDS.PRACTICE_SENTENCE * XP_REWARDS.BONUS_MULTIPLIER && (
+                <span className="text-sm">(Bonus!)</span>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">

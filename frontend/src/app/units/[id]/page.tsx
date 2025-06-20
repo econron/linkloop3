@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { curriculumData } from '@/data/curriculum';
 import { CompetencyStage, Competency } from '@/types/curriculum';
+import { addXP, markStageCompleted, XP_REWARDS } from '@/lib/gamification';
 
 export default function UnitPage() {
   const router = useRouter();
@@ -245,6 +246,10 @@ export default function UnitPage() {
 
   const handleNext = () => {
     if (!stage || !competency) return;
+    
+    // Award XP for completing unit
+    addXP(XP_REWARDS.UNIT_COMPLETE);
+    markStageCompleted(stage.id);
     
     // 次のステージまたは完了ページに遷移
     const currentStageIndex = competency.stages.findIndex(s => s.id === stage.id);

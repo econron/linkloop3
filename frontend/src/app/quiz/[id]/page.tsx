@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { curriculumData } from '@/data/curriculum';
 import { CompetencyStage, Competency } from '@/types/curriculum';
 import confetti from 'canvas-confetti';
+import { addXP, calculateQuizXP, markStageCompleted, XP_REWARDS } from '@/lib/gamification';
 
 export default function QuizStagePage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function QuizStagePage() {
   const [correctAnswer, setCorrectAnswer] = useState<string>('');
   const [questionAudio, setQuestionAudio] = useState<string>('');
   const [score, setScore] = useState(0);
+  const [showXPGain, setShowXPGain] = useState(false);
 
   useEffect(() => {
     // カリキュラムデータから該当ステージを見つける
@@ -90,6 +92,12 @@ export default function QuizStagePage() {
     
     if (selectedAnswer === correctAnswer) {
       setScore(prev => prev + 1);
+      
+      // Award XP for correct answer
+      addXP(XP_REWARDS.QUIZ_CORRECT);
+      setShowXPGain(true);
+      setTimeout(() => setShowXPGain(false), 2000);
+      
       playSuccessSound();
       confetti({
         particleCount: 100,
@@ -109,7 +117,13 @@ export default function QuizStagePage() {
       const finalScore = (score / stage.content.quiz.questions.length) * 100;
       const passed = finalScore >= stage.content.quiz.passingScore;
       
+      // Award completion XP
+      const completionXP = calculateQuizXP(score, stage.content.quiz.questions.length);
+      addXP(completionXP);
+      
       if (passed && stage && competency) {
+        markStageCompleted(stage.id);
+        
         // Move to next stage
         const currentStageIndex = competency.stages.findIndex(s => s.id === stage.id);
         if (currentStageIndex < competency.stages.length - 1) {
@@ -143,6 +157,16 @@ export default function QuizStagePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-2xl mx-auto">
+        {/* XP Gain Notification */}
+        {showXPGain && (
+          <div className="fixed top-4 right-4 bg-yellow-400 text-yellow-900 px-6 py-3 rounded-lg shadow-lg animate-bounce z-50">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⭐</span>
+              <span className="font-bold">+{XP_REWARDS.QUIZ_CORRECT} XP</span>
+            </div>
+          </div>
+        )}
+        
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">

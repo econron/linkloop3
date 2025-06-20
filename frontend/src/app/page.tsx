@@ -6,6 +6,7 @@ import { UnitCard } from '@/components/course/UnitCard';
 import { getUserRanking, getRanking, getQuests, getXpHistory } from '../lib/api';
 import { curriculumData } from '@/data/curriculum';
 import { CompetencyStage } from '@/types/curriculum';
+import { getTotalXP, loadGameProgress } from '@/lib/gamification';
 
 // カリキュラムデータから段階別ユニットを生成
 const generateUnitsFromCurriculum = () => {
@@ -50,6 +51,7 @@ export default function HomePage() {
   const [units, setUnits] = useState(() => generateUnitsFromCurriculum());
   // 追加: ゲーミフィケーション用state
   const [xp, setXp] = useState<number>(0);
+  const [gamificationXP, setGamificationXP] = useState<number>(0);
   const [rank, setRank] = useState<number | null>(null);
   const [weeklyRanking, setWeeklyRanking] = useState<any[]>([]);
   const [quests, setQuests] = useState<any[]>([]);
@@ -68,6 +70,19 @@ export default function HomePage() {
     getQuests(USER_ID).then(res => {
       setQuests(res.data ?? []);
     }).catch(() => {});
+    
+    // Load gamification XP
+    setGamificationXP(getTotalXP());
+  }, []);
+
+  // Update gamification XP on focus (when user returns from other pages)
+  useEffect(() => {
+    const handleFocus = () => {
+      setGamificationXP(getTotalXP());
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const handleUnitClick = (unitId: string) => {
@@ -94,7 +109,7 @@ export default function HomePage() {
       <div className="mb-4">
         <div className="flex items-center gap-4">
           <div className="flex-1">
-            <div className="text-xs text-gray-500">XP</div>
+            <div className="text-xs text-gray-500">Backend XP</div>
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 transition-all"
@@ -102,6 +117,16 @@ export default function HomePage() {
               />
             </div>
             <div className="text-sm text-blue-700 font-bold mt-1">{xp} XP</div>
+          </div>
+          <div className="flex-1">
+            <div className="text-xs text-gray-500">Learning XP</div>
+            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 transition-all"
+                style={{ width: `${Math.min(gamificationXP / 100, 100)}%` }}
+              />
+            </div>
+            <div className="text-sm text-green-700 font-bold mt-1">{gamificationXP} XP</div>
           </div>
           <div className="text-xs text-gray-500">RANK</div>
           <div className="text-lg font-bold text-purple-700">{rank ?? '-'}</div>
