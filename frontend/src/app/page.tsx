@@ -170,6 +170,44 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Beta Lessons Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 border-2 border-dashed border-purple-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+            BETA
+          </div>
+          <h2 className="text-xl font-bold text-purple-800">ベータレッスン</h2>
+        </div>
+        <p className="text-sm text-purple-700 mb-4">
+          新機能をテスト中です。フィードバックをお待ちしています！
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <button 
+            onClick={() => router.push('/beta-lesson')}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg p-4 hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 text-left"
+          >
+            <div className="font-bold text-white flex items-center gap-2">
+              ⭐ 2分間R/L体験レッスン
+            </div>
+            <div className="text-sm text-purple-100 mt-1">完全理解への特別レッスン</div>
+          </button>
+          <button 
+            onClick={() => router.push('/quiz/SEG-LIQUID-LR-007-2')}
+            className="bg-white border border-purple-200 rounded-lg p-4 hover:bg-purple-50 transition-colors text-left"
+          >
+            <div className="font-medium text-purple-800">R/L 聞き分けクイズ</div>
+            <div className="text-sm text-purple-600 mt-1">流音の識別練習</div>
+          </button>
+          <button 
+            onClick={() => router.push('/practice/SEG-LIQUID-LR-007-3')}
+            className="bg-white border border-purple-200 rounded-lg p-4 hover:bg-purple-50 transition-colors text-left"
+          >
+            <div className="font-medium text-purple-800">R/L 発音練習</div>
+            <div className="text-sm text-purple-600 mt-1">音素の生成練習</div>
+          </button>
+        </div>
+      </div>
+
       <div>
         <h1 className="text-2xl font-bold text-black">コース進捗</h1>
         <p className="mt-2 text-sm text-black">
