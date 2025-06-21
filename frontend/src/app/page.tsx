@@ -8,47 +8,56 @@ import { curriculumData } from '@/data/curriculum';
 import { CompetencyStage } from '@/types/curriculum';
 import { getTotalXP, loadGameProgress } from '@/lib/gamification';
 
-// カリキュラムデータから段階別ユニットを生成
-const generateUnitsFromCurriculum = () => {
-  const units: Array<{
-    id: string;
-    title: string;
-    description: string;
-    status: 'unlocked' | 'locked' | 'completed';
-    progress: number;
+// カリキュラムデータからグループ化されたユニットを生成
+const generateGroupedUnitsFromCurriculum = () => {
+  const groups: Array<{
     competencyId: string;
-    stageType: 'lecture' | 'perception' | 'production';
+    competencyTitle: string;
+    competencyDescription: string;
+    phonemes: string[];
+    stages: Array<{
+      id: string;
+      title: string;
+      description: string;
+      status: 'unlocked' | 'locked' | 'completed';
+      progress: number;
+      stageType: 'lecture' | 'perception' | 'production';
+    }>;
   }> = [];
 
   curriculumData.competencies.forEach((competency) => {
-    competency.stages.forEach((stage, stageIndex) => {
-      const stageTypeNames = {
-        lecture: '講義',
-        perception: '知覚練習',
-        production: '発音練習'
-      };
+    const stageTypeNames = {
+      lecture: '講義',
+      perception: '知覚練習', 
+      production: '発音練習'
+    };
 
-      units.push({
-        id: stage.id,
-        title: `${competency.title} - ${stageTypeNames[stage.type]}`,
-        description: stage.description,
-        // status: stage.unlocked ? 'unlocked' : 'locked',
-        status: 'unlocked',
-        progress: stage.completed ? 100 : 0,
-        competencyId: competency.id,
-        stageType: stage.type
-      });
+    const stages = competency.stages.map((stage) => ({
+      id: stage.id,
+      title: stageTypeNames[stage.type],
+      description: stage.description,
+      status: 'unlocked' as const, // stage.unlocked ? 'unlocked' as const : 'locked' as const,
+      progress: stage.completed ? 100 : 0,
+      stageType: stage.type
+    }));
+
+    groups.push({
+      competencyId: competency.id,
+      competencyTitle: competency.title,
+      competencyDescription: competency.description,
+      phonemes: competency.phonemes,
+      stages
     });
   });
 
-  return units;
+  return groups;
 };
 
 const USER_ID = 'test-user'; // TODO: 実装時は動的に
 
 export default function HomePage() {
   const router = useRouter();
-  const [units, setUnits] = useState(() => generateUnitsFromCurriculum());
+  const [unitGroups, setUnitGroups] = useState(() => generateGroupedUnitsFromCurriculum());
   // 追加: ゲーミフィケーション用state
   const [xp, setXp] = useState<number>(0);
   const [gamificationXP, setGamificationXP] = useState<number>(0);
@@ -85,20 +94,17 @@ export default function HomePage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const handleUnitClick = (unitId: string) => {
-    const unit = units.find(u => u.id === unitId);
-    if (!unit) return;
-
+  const handleUnitClick = (stageId: string, stageType: 'lecture' | 'perception' | 'production') => {
     // 段階に応じて適切なページに遷移
-    switch (unit.stageType) {
+    switch (stageType) {
       case 'lecture':
-        router.push(`/units/${unitId}`);
+        router.push(`/units/${stageId}`);
         break;
       case 'perception':
-        router.push(`/quiz/${unitId}`);
+        router.push(`/quiz/${stageId}`);
         break;
       case 'production':
-        router.push(`/practice/${unitId}`);
+        router.push(`/practice/${stageId}`);
         break;
     }
   };
@@ -171,13 +177,65 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {units.map((unit) => (
-          <UnitCard
-            key={unit.id}
-            {...unit}
-            onClick={() => handleUnitClick(unit.id)}
-          />
+      {/* Grouped Unit Cards */}
+      <div className="space-y-8">
+        {unitGroups.map((group) => (
+          <div key={group.competencyId} className="bg-white rounded-lg shadow-lg p-6">
+            {/* Group Header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-xl font-bold text-gray-800">{group.competencyTitle}</h2>
+                <div className="flex gap-1">
+                  {group.phonemes.map((phoneme, index) => (
+                    <span 
+                      key={index}
+                      className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded"
+                    >
+                      {phoneme}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">{group.competencyDescription}</p>
+              
+              {/* Progress indicator for the group */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>進捗</span>
+                  <span>{group.stages.filter(s => s.progress === 100).length}/{group.stages.length}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(group.stages.filter(s => s.progress === 100).length / group.stages.length) * 100}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stage Cards */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              {group.stages.map((stage, index) => (
+                <div key={stage.id} className="relative">
+                  {/* Stage number badge */}
+                  <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">
+                    {index + 1}
+                  </div>
+                  
+                  <UnitCard
+                    id={stage.id}
+                    title={stage.title}
+                    description={stage.description}
+                    status={stage.status}
+                    progress={stage.progress}
+                    onClick={() => handleUnitClick(stage.id, stage.stageType)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
