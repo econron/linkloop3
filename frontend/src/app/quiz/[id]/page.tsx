@@ -21,6 +21,8 @@ export default function QuizStagePage() {
   const [questionAudio, setQuestionAudio] = useState<string>('');
   const [score, setScore] = useState(0);
   const [showXPGain, setShowXPGain] = useState(false);
+  const [showSadEffect, setShowSadEffect] = useState(false);
+  const [showSadPopup, setShowSadPopup] = useState(false);
 
   useEffect(() => {
     // カリキュラムデータから該当ステージを見つける
@@ -73,6 +75,7 @@ export default function QuizStagePage() {
     audio.play().catch(e => console.error('Success audio play failed:', e));
   };
 
+
   const handleAnswerSelect = (answer: string) => {
     setSelectedAnswer(answer);
     
@@ -104,6 +107,14 @@ export default function QuizStagePage() {
         spread: 70,
         origin: { y: 0.6 }
       });
+    } else {
+      // Show sad effect for incorrect answer
+      setShowSadEffect(true);
+      setShowSadPopup(true);
+      
+      // Hide effects after timers
+      setTimeout(() => setShowSadEffect(false), 2000);
+      setTimeout(() => setShowSadPopup(false), 1500);
     }
   };
 
@@ -166,6 +177,48 @@ export default function QuizStagePage() {
             </div>
           </div>
         )}
+        
+        {/* Sad Effect Notification */}
+        {showSadEffect && (
+          <div className="fixed top-4 left-4 bg-red-100 text-red-800 px-6 py-3 rounded-lg shadow-lg animate-pulse z-50">
+            <div className="flex items-center gap-2">
+              <span className="text-xl animate-bounce">🥺</span>
+              <span className="font-medium">もう一度頑張って！</span>
+            </div>
+          </div>
+        )}
+
+        {/* Large Sad Popup */}
+        {showSadPopup && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="animate-ping">
+              <div className="text-9xl animate-bounce" style={{
+                animation: 'sadPopup 1.5s ease-out forwards',
+                filter: 'drop-shadow(0 0 20px rgba(239, 68, 68, 0.5))'
+              }}>
+                🥺
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add custom CSS for the sad popup animation */}
+        <style jsx>{`
+          @keyframes sadPopup {
+            0% {
+              transform: scale(0) rotate(-180deg);
+              opacity: 0;
+            }
+            50% {
+              transform: scale(1.2) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1) rotate(0deg);
+              opacity: 0.8;
+            }
+          }
+        `}</style>
         
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">

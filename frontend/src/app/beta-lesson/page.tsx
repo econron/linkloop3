@@ -210,17 +210,35 @@ export default function BetaLessonPage() {
                 音声を聞いてみましょう
               </h3>
               <div className="flex justify-center gap-4">
-                {currentLessonStep.audioFiles.map((audio, index) => (
-                  <button
-                    key={index}
-                    onClick={() => playAudio(audio)}
-                    disabled={isPlaying}
-                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                  >
-                    🔊 {index === 0 ? 'red' : 'led'} を聞く
-                  </button>
-                ))}
+                {currentLessonStep.audioFiles.map((audio, index) => {
+                  const isButtonEnabled = index === 0 || playedAudios.includes(index - 1);
+                  const hasBeenPlayed = playedAudios.includes(index);
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => playAudio(audio, index)}
+                      disabled={isPlaying || !isButtonEnabled}
+                      className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                        !isButtonEnabled 
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : hasBeenPlayed
+                            ? 'bg-green-500 hover:bg-green-600 text-white'
+                            : isPlaying && isButtonEnabled
+                              ? 'bg-blue-400 text-white'
+                              : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                    >
+                      {hasBeenPlayed ? '✅' : '🔊'} {index === 0 ? 'red' : 'led'} を聞く
+                    </button>
+                  );
+                })}
               </div>
+              {currentLessonStep.audioFiles.length > 1 && playedAudios.length === 0 && (
+                <p className="text-center text-blue-600 text-sm mt-3">
+                  最初に "red" を聞いてから "led" が聞けるようになります
+                </p>
+              )}
             </div>
           )}
 
@@ -247,17 +265,35 @@ export default function BetaLessonPage() {
                 最終チャレンジ
               </h3>
               <div className="flex justify-center gap-4 mb-4">
-                {currentLessonStep.audioFiles.map((audio, index) => (
-                  <button
-                    key={index}
-                    onClick={() => playAudio(audio)}
-                    disabled={isPlaying}
-                    className="bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                  >
-                    🔊 {index === 0 ? 'red' : 'led'}
-                  </button>
-                ))}
+                {currentLessonStep.audioFiles.map((audio, index) => {
+                  const isButtonEnabled = index === 0 || playedAudios.includes(index - 1);
+                  const hasBeenPlayed = playedAudios.includes(index);
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => playAudio(audio, index)}
+                      disabled={isPlaying || !isButtonEnabled}
+                      className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                        !isButtonEnabled 
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : hasBeenPlayed
+                            ? 'bg-green-500 hover:bg-green-600 text-white'
+                            : isPlaying && isButtonEnabled
+                              ? 'bg-yellow-400 text-white'
+                              : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                      }`}
+                    >
+                      {hasBeenPlayed ? '✅' : '🔊'} {index === 0 ? 'red' : 'led'}
+                    </button>
+                  );
+                })}
               </div>
+              {currentLessonStep.audioFiles.length > 1 && playedAudios.length === 0 && (
+                <p className="text-center text-yellow-600 text-sm mb-3">
+                  最初に "red" を聞いてから "led" が聞けるようになります
+                </p>
+              )}
               <p className="text-center text-yellow-700">
                 最初と比べて、違いがはっきり分かるようになりましたか？
               </p>
